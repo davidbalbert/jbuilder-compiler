@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "jbuilder/compiler"
+
+# You can add fixtures and/or initialization code here to make experimenting
+# with your gem easier. You can also use a different console, if you like.
+
+require 'sexp_processor'
+require 'ruby_parser'
+require 'ruby2ruby'
+
+class InflationaryProcessor < SexpProcessor
+  def process_lit(exp)
+    _ = exp.shift
+    val = exp.shift
+
+    if val.is_a? Numeric
+      s(:lit, val + 1)
+    else
+      s(:lit, val)
+    end
+  end
+end
+
+source = <<-RUBY
+json.extract! thing, :foo, :bar, :baz
+
+if thing.condition?
+  json.bar "hello"
+end
+
+json.baz collection do |element|
+  json.extract!(element, :x, :y)
+end
+RUBY
+
+source2 = "x = 1 + 2 + 3"
+
+sexp = RubyParser.new.parse(source2)
+
+processor = InflationaryProcessor.new
+
+printer = Ruby2Ruby.new
+
+require 'pp'
+
+pp printer.process(processor.process(sexp.deep_clone))
+
+require "pry"
+binding.pry
+# Pry.start
